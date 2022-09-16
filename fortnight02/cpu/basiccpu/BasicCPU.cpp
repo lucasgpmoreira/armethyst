@@ -117,6 +117,10 @@ int BasicCPU::ID()
 			break;
 		// case TODO
 		// x101 Data Processing -- Register on page C4-278
+        case 0x0A000000: //
+        case 0x1A000000:
+            return decodeDataProcReg();
+            break;
 		default:
 			return 1; // instrução não implementada
 	}
@@ -221,15 +225,55 @@ int BasicCPU::decodeLoadStore() {
  *		   1: se a instrução não estiver implementada.
  */
 int BasicCPU::decodeDataProcReg() {
-	// TODO
-	//		acrescentar um switch no estilo do switch de decodeDataProcImm,
-	//		e implementar APENAS PARA A INSTRUÇÃO A SEGUIR:
-	//				'add w1, w1, w0'
-	//		que aparece na linha 43 de isummation.S e no endereço 0x68
-	//		de txt_isummation.o.txt.
-	
-	
-	// instrução não implementada
+	unsigned int n,m,shift,imm6;
+
+    switch (IR & 0xFF200000)
+    {
+
+        // C6.2.5 ADD (shifted register) p. C6-688
+        case 0x8B000000:
+        case 0x0B000000:
+            // sf == 1 not implemented (64 bits)
+            if (IR & 0x80000000) return 1;
+
+            n=(IR & 0x000003E0) >> 5;
+            A=getW(n);
+
+            m=(IR & 0x001F0000) >> 16;
+            int BW=getW(m);
+
+            shift=(IR & 0x00C00000) >> 22;
+            imm6=(IR & 0x0000FC00) >> 10;
+
+            switch(shift){
+                case 0://LSL
+                    B= BW << imm6;
+                    break;
+                case 1://LSR
+                    B=((unsigned long)BW) >> imm6;
+                    break;
+                case 2://ASR
+                    B=((signed long)BW) >> imm6;
+                    break;
+                default:
+                    return 1;
+            }
+
+            // atribuir ALUctrl
+            ALUctrl = ALUctrlFlag::ADD;
+
+            // atribuir MEMctrl
+            MEMctrl = MEMctrlFlag::MEM_NONE;
+
+            // atribuir WBctrl
+            WBctrl = WBctrlFlag::RegWrite;
+
+            // atribuir MemtoReg
+            MemtoReg = false;
+
+
+            return 0;
+    }
 	return 1;
 }
 
